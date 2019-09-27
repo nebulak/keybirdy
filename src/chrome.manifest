@@ -1,0 +1,7 @@
+content keybirdy chrome/content/ contentaccessible=yes
+skin keybirdy classic/1.0 chrome/skin/
+locale keybirdy en-US chrome/locale/en-US/
+locale keybirdy de-DE chrome/locale/de-DE/
+
+# overlay chrome://messenger/content/messenger.xul chrome://keybirdy/content/main-window.xul
+overlay chrome://messenger/content/messengercompose/messengercompose.xul chrome://keybirdy/content/keybirdy-sidebar.xul

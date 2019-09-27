@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE overlay >
+<overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+	<script type="application/x-javascript" src="chrome://keybirdy/content/js/jquery-2.2.3.min.js"/>
+  <script type="application/x-javascript" src="chrome://keybirdy/content/js/key-lookup.js"/>
+
+	<hbox id="composeContentBox">
+		<splitter id="keybirdy-sidebar-splitter"></splitter>
+		<vbox id="keybirdy-sidebar-box">
+			<iframe type="chrome" src="chrome://keybirdy/content/keybirdy-sidebar.html" flex="1" width="450" id="keybirdy-sidebar-content" />
+		</vbox>
+	</hbox>
+
+	<observes element="enigmail-bc-encrypt"
+		attribute="checked"
+		onbroadcast="enigmailEncryptOnCommandVVV()"
+	/>
+
+</overlay>
