@@ -133,17 +133,19 @@ var processedRecipients = {
 		this.data = [];
 	},
 	deleteElem: function(emailAddress) {
+		
 		for(var j=0; j < this.data.length; j++)
 		{
 			if(this.data[j].address === emailAddress)
 			{
-				this.data.splice(j, 1);
-				j--;
+				this.data = this.data.splice(j, 1);
+				return;
+				//j--;
 			}
 		}
 	},
 	push: function(inRecipient) {
-		this.deleteElem(inRecipient.address);
+		//this.deleteElem(inRecipient.address);
 		this.data.push(inRecipient);
 		renderSidebar();
 	},
@@ -193,13 +195,14 @@ var processedRecipients = {
  * @module keybirdy-sidebar
  * @param {String} e
  */
-function parentEventHandler(e) {
+async function parentEventHandler(e) {
 	//TODO: delete log
 	console.log("GOT DATA: " + JSON.stringify(e.detail));
-	/*processedRecipients = */processRecipients(e.detail.recipients);
 	currentRecipients = e.detail.recipients;
 	hasPrivateKey = KeyManager.isPubKeyAvailable(e.detail.sender);
-	renderSidebar();
+	/*processedRecipients = */ processRecipients(e.detail.recipients);
+
+	//renderSidebar();
 }
 
 /**
@@ -207,13 +210,13 @@ function parentEventHandler(e) {
  * @module keybirdy-sidebar
  */
 function renderSidebar() {
-	html = template({sender: {pgp: hasPrivateKey}, processedRecipients: filterRecipients(currentRecipients/*processedRecipients.data*/)});
+	html = template({sender: {pgp: hasPrivateKey}, processedRecipients: filterRecipients(currentRecipients)/*processedRecipients.data)*/});
 	document.getElementById("keybirdy-content").innerHTML = html;
 }
 
 function filterRecipients(currentRecipients) {
 	var filteredRecipients = [];
-	console.log("currentRecipients: " + JSON.stringify(currentRecipients));
+	//console.log("currentRecipients: " + JSON.stringify(currentRecipients));
 	console.log("processedRecipients: " + JSON.stringify(processedRecipients.data));
 
 	for (var i=0; i < currentRecipients.length; i++)
@@ -235,123 +238,88 @@ function filterRecipients(currentRecipients) {
 	return filteredRecipients;
 }
 
-function processRecipients(recipients) {
+async function findKeyForRecipient(email) {
+	//Start new implementation
+	var currentRec = {};
+	currentRec.address = email;
+
+
+	return wkd.lookup({email: currentRec.address})
+	.then(function(data){
+		if (data) {
+			console.log("GOT WKD-KEY: " + currentRec.address + ":" + data.keys[0].getUserIds()[0]);
+			var rec = {};
+			rec.address = currentRec.address;
+			rec.isInKeyRing = true;
+			rec.isImportable = true;
+			rec.source = "WKD";
+			console.log("WKD-Rec: " + JSON.stringify(rec));
+			return rec;
+		}
+		else
+		{
+			// Check keys.openpgp.org
+			console.log("No WKD-KEY in response: " + currentRec.address);
+			var hkp = new openpgp.HKP("https://keys.openpgp.org");
+			return hkp.lookup({query: currentRec.address})
+			.then(function(hkpKey){
+				if (hkpKey) {
+					console.log("HKP-Key: " + hkpKey);
+					var rec = {};
+					rec.address = currentRec.address;
+					rec.isInKeyRing = true;
+					rec.isImportable = true;
+					rec.source = "keyserver";
+					console.log("HKP-Rec: " + JSON.stringify(rec));
+					return rec;
+				} else {
+					console.log("No HKP-Key: " + hkpKey);
+					if (KeyManager.isPubKeyAvailable(currentRec.address))
+					{
+						var rec = {};
+						rec.address = currentRec.address;
+						rec.isInKeyring = true;
+						rec.isImportable = true;
+						rec.source = "local";
+						console.log("Processed Recipient: PubKey Available: " + currentRec.address);
+						return rec;
+					}
+					else
+					{
+						 var rec = {};
+						 rec.address = currentRec.address;
+						 rec.isInKeyRing = false;
+						 rec.isImportable = false;
+						 rec.source = "none";
+						 console.log("NoKey-Rec: " + JSON.stringify(rec));
+						 return rec;
+					}
+				}
+			});
+		 }
+	 });
+}
+
+
+async function processRecipients(recipients) {
+
+	var finishedRecipients = [];
+
 	for (var i=0; i<recipients.length; i++)
 	{
-		//Start new implementation
-		var currentRec = {};
-		currentRec.address = recipients[i].address;
-
-
-
-		wkd.lookup({email: recipients[i].address})
-		.then(function(data){
-			if (data) {
-				console.log("GOT WKD-KEY: " + currentRec.address + ":" + data.keys[0].getUserIds()[0]);
-				var rec = {};
-				rec.address = currentRec.address;
-				rec.isInKeyRing = true;
-				rec.isImportable = true;
-				rec.source = "WKD";
-				processedRecipients.push(rec);
-				GPGIPC.importKey(data.keys[0].armor(), function(result){
-					console.log("imported key.")
-				});
-			}
-			else {
-				// Check keys.openpgp.org
-				console.log("No WKD-KEY in response: " + currentRec.address);
-				hkpClient.search(currentRec.address)
-				.done(function(records, data, textStatus, jqXHR) {
-
-					 //console.log("Search::Yeah!", records);
-					 var rec = {};
-					 rec.address = currentRec.address;
-					 rec.isInKeyRing = true;
-					 rec.isImportable = true;
-					 rec.source = "keyserver";
-					 processedRecipients.push(rec);
-					 GPGIPC.importKey(records, function(result){
-						 console.log("imported key.")
-					 });
-					 //TODO: update view/keylist
-					 //currentRec.isImportable = true;
-			 		 //processedRecs.push(currentRec);
-				 })
-				 .fail(function(jqXHR, textStatus, errorThrown) {
-					 console.log("Unable to import key from hkp")
-					 //TODO: CHECK LOCAL KEYRING!!!!!!!
-					 	if (KeyManager.isPubKeyAvailable(currentRec.address))
-	 			 		{
-	 						rec.address = currentRec.address;
-	 			 			currentRec.isInKeyring = true;
-	 			 			currentRec.isImportable = true;
-	 			 			currentRec.source = "local";
-	 			 			console.log("Processed Recipient: PubKey Available: " + currentRec.address);
-	 			 			processedRecipients.push(currentRec);
-	 			 		}
-						else
-						{
-								var rec = {};
-		 					 rec.address = currentRec.address;
-		 					 rec.isInKeyRing = false;
-		 					 rec.isImportable = false;
-		 					 rec.source = "none";
-		 					 processedRecipients.push(rec);
-						}
-
-					 //TODO: check local keyring
-
-					 //TODO: check local keyring
-				   //console.log("Search::Bummer!", textStatus, errorThrown);
-					 //currentRec.isImportable = false;
-			 		 //processedRecs.push(currentRec);
-
-				 });
-			}
-
-		},//TODO: is the next part needed?
-		function(data) {
-			/*
-			//check keys.openpgp.org
-			console.log("NO WKD Key found: " + currentRec.address + ":"+ data.message);
-			hkpClient.search(currentRec.address)
-			.done(function(records, data, textStatus, jqXHR) {
-
-				 //console.log("Search::Yeah!", records);
-				 var rec = {};
-				 rec.address = currentRec.address;
-				 rec.isInKeyRing = true;
-				 rec.isImportable = true;
-				 rec.source = "keyserver";
-				 processedRecipients.push(rec);
-				 GPGIPC.importKey(records, function(result){
-					 console.log("imported key.")
-				 });
-				 //TODO: update view/keylist
-				 //currentRec.isImportable = true;
-		 		 //processedRecs.push(currentRec);
-			 })
-			 .fail(function(jqXHR, textStatus, errorThrown) {
-				 // check local
-				 	console.log("Unable to import key from hkp")
-					if (KeyManager.isPubKeyAvailable(recipients[i].address))
-			 		{
-						rec.address = currentRec.address;
-			 			currentRec.isInKeyring = true;
-			 			currentRec.isImportable = true;
-			 			currentRec.source = "local";
-			 			console.log("Processed Recipient: PubKey Available: " + recipients[i].address);
-			 			processedRecipients.push(currentRec);
-			 		}
-			   //console.log("Search::Bummer!", textStatus, errorThrown);
-				 //currentRec.isImportable = false;
-		 		 //processedRecs.push(currentRec);
-			 });
-		*/})
+		var finishedRecipient = await findKeyForRecipient(recipients[i].address);
+		//finishedRecipients.push(await findKeyForRecipient(recipients[i].address));
+		processedRecipients.push(finishedRecipient);
 	}
-
-	return processedRecipients;
+	//TODO: remove duplicates in processedRecipients
+	/*
+	for (var i=0; i < finishedRecipients.length; i++)
+	{
+		processedRecipients.push(finishedRecipients[i]);
+		//processedRecipients.deleteRecipientInProgress(recipients[i].address);
+	}*/
+	return;
+	//return processedRecipients;
 }
 document.addEventListener("kbevent", parentEventHandler, false);
 
