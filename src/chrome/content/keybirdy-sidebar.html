@@ -254,6 +254,9 @@ async function findKeyForRecipient(email) {
 			rec.isImportable = true;
 			rec.source = "WKD";
 			console.log("WKD-Rec: " + JSON.stringify(rec));
+			GPGIPC.importKey(data.keys[0].armor(), function(result){
+					console.log("imported key to keyring.")
+			});
 			return rec;
 		}
 		else
@@ -271,6 +274,9 @@ async function findKeyForRecipient(email) {
 					rec.isImportable = true;
 					rec.source = "keyserver";
 					console.log("HKP-Rec: " + JSON.stringify(rec));
+					GPGIPC.importKey(hkpKey, function(result){
+						console.log("imported key to keyring.")
+					});
 					return rec;
 				} else {
 					console.log("No HKP-Key: " + hkpKey);
