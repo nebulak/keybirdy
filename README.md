@@ -36,6 +36,8 @@ A Thunderbird extension to enable Blind Trust Before Verification for OpenPGP.
 
 The extension can be built with *ant*. Open a new terminal in the main directory and execute *ant*.
 
+The generated addon is created in the *dist* folder and can be imported in thunderbird.
+
 ## Notes
 
 The openpgp.js library is modified to work in thunderbird. The only modification is the use of a fake LocalStorage, because Thunderbird does not support LocalStorage.
