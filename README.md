@@ -3,7 +3,7 @@ A Thunderbird extension to enable Blind Trust Before Verification for OpenPGP.
 
 **Status: Proof of Concept / WIP**
 
-![screenshot](https://github.com/nebulak/keybirdy/raw/master/docs/Screenshots/compose.png "Screenshot of compose window")
+![screenshot](https://raw.githubusercontent.com/nebulak/keybirdy/master/docs/screenshots/compose.png "Screenshot of compose window")
 
 
 
