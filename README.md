@@ -1,8 +1,9 @@
 # KeyBirdy
 A Thunderbird extension to enable Blind Trust Before Verification for OpenPGP.
-Status: WIP
 
+**Status: Proof of Concept / WIP**
 
+![screenshot](https://github.com/nebulak/keybirdy/raw/master/docs/Screenshots/compose.png "Screenshot of compose window")
 
 
 
